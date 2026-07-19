@@ -43,10 +43,16 @@ SIM_ENABLED = os.environ.get("SIM_ENABLED", "1").lower() not in ("0", "false", "
 # Numbers without a country code get this one prepended. Default +91 (India).
 DEFAULT_COUNTRY_CODE = os.environ.get("DEFAULT_COUNTRY_CODE", "+91")
 
-TWILIO_SID = os.environ.get("TWILIO_SID")
-TWILIO_TOKEN = os.environ.get("TWILIO_TOKEN")
+def _clean_secret(v):
+    # Strip whitespace and any non-ASCII (e.g. a stray "…" from a value pasted
+    # while truncated) so a bad paste can't crash the latin-1 Basic-auth encoding.
+    return "".join(c for c in (v or "").strip() if ord(c) < 128)
+
+
+TWILIO_SID = _clean_secret(os.environ.get("TWILIO_SID"))
+TWILIO_TOKEN = _clean_secret(os.environ.get("TWILIO_TOKEN"))
 # Twilio sender number for SMS, bare E.164 (e.g. +14787805487).
-TWILIO_FROM = os.environ.get("TWILIO_FROM")
+TWILIO_FROM = _clean_secret(os.environ.get("TWILIO_FROM"))
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 DB_PATH = os.environ.get("DB_PATH", os.path.join(HERE, "machines.db"))
@@ -463,10 +469,12 @@ def health():
         "ok": True,
         "sms_configured": bool(TWILIO_SID and TWILIO_TOKEN and TWILIO_FROM),
         "twilio_from_tail": (TWILIO_FROM[-4:] if TWILIO_FROM else None),
+        "twilio_sid_len": len(TWILIO_SID),      # full SID is 34; less => truncated paste
+        "twilio_token_len": len(TWILIO_TOKEN),  # full token is 32
         "sim_enabled": SIM_ENABLED,
         "default_country_code": DEFAULT_COUNTRY_CODE,
         "last_sms": LAST_SMS,
-        "version": "v3-sms-diag",
+        "version": "v4-clean-creds",
     }
 
 
