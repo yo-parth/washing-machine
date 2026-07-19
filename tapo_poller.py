@@ -30,6 +30,7 @@ whole point — swap this poller for a CT clamp and the backend never changes.
 import asyncio
 import os
 import sys
+import time
 
 import requests
 
@@ -51,18 +52,28 @@ def die(msg):
 
 
 def post_reading(watts):
-    """POST one reading. Network hiccups must not kill the poll loop."""
-    try:
-        r = requests.post(
-            f"{BACKEND_URL}/api/ingest",
-            json={"machine_id": MACHINE_ID, "amps": watts},
-            headers={"X-Device-Key": DEVICE_KEY},
-            timeout=5,
-        )
-        if r.status_code >= 400:
+    """POST one reading, with one quick retry. Network hiccups and transient host
+    errors (e.g. a free-tier host's edge briefly returning 'no-server') must not
+    drop a reading or kill the poll loop."""
+    for attempt in (1, 2):
+        try:
+            r = requests.post(
+                f"{BACKEND_URL}/api/ingest",
+                json={"machine_id": MACHINE_ID, "amps": watts},
+                headers={"X-Device-Key": DEVICE_KEY},
+                timeout=5,
+            )
+            if r.status_code < 400:
+                return
+            if attempt == 1:
+                time.sleep(0.4)  # transient — try once more before giving up
+                continue
             print(f"[poller] backend rejected reading: {r.status_code} {r.text[:120]}")
-    except Exception as exc:  # noqa: BLE001
-        print(f"[poller] backend unreachable: {exc}")
+        except Exception as exc:  # noqa: BLE001
+            if attempt == 1:
+                time.sleep(0.4)
+                continue
+            print(f"[poller] backend unreachable: {exc}")
 
 
 async def connect():
