@@ -20,7 +20,7 @@ The repo is already initialised and committed locally. Create an **empty** repo
 on GitHub (github.com/new — no README/.gitignore), then:
 
 ```bash
-git remote add origin https://github.com/yo-parth/laundry-dashboard.git
+git remote add origin https://github.com/yo-parth/washing-machine.git
 git branch -M main
 git push -u origin main
 ```
