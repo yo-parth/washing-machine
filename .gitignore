@@ -1,0 +1,17 @@
+# virtualenv
+.venv/
+# python caches
+__pycache__/
+*.pyc
+# runtime state (rebuilds from readings; never commit)
+machines.db
+# generated QR stickers (regenerate per deploy URL with make_qr.py)
+qr_*.png
+# the tunnel binary (54 MB) and any logs
+cloudflared.exe
+*.log
+# scratch
+_check.js
+# local secrets — never commit these
+.env
+.env.local

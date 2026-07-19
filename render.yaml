@@ -1,0 +1,39 @@
+# Render Blueprint — deploys the dashboard + backend as a free web service.
+#
+# The POLLER is intentionally NOT deployed here: it must run on your LAN next to
+# the Tapo plug (172.16.0.98 is a private address, unreachable from the cloud)
+# and POST readings to this service's /api/ingest. See DEPLOY.md.
+services:
+  - type: web
+    name: laundry-dashboard
+    runtime: python
+    plan: free
+    region: singapore                 # closest Render region to India
+    buildCommand: "pip install -r requirements.txt"
+    startCommand: "uvicorn main:app --host 0.0.0.0 --port $PORT"
+    envVars:
+      - key: PYTHON_VERSION
+        value: "3.12.7"
+      # --- thresholds (tune in the Render dashboard without redeploying) ---
+      - key: ON_THRESHOLD_A
+        value: "100"
+      - key: OFF_THRESHOLD_A
+        value: "50"
+      - key: OFF_HOLD_S
+        value: "8"                    # 8 suits the microwave demo; a real washer wants ~180
+      - key: GRACE_S
+        value: "60"
+      - key: OFFLINE_AFTER_S
+        value: "60"
+      # --- hardening: no public power-faking on a public URL ---
+      - key: SIM_ENABLED
+        value: "0"
+      # --- secrets: set these in the Render dashboard (not committed) ---
+      - key: DEVICE_KEY
+        sync: false
+      - key: TWILIO_SID
+        sync: false
+      - key: TWILIO_TOKEN
+        sync: false
+      - key: TWILIO_FROM
+        sync: false

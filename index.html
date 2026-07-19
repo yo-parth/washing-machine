@@ -1,0 +1,277 @@
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<meta name="theme-color" content="#0b0e13" media="(prefers-color-scheme: dark)" />
+<meta name="theme-color" content="#eef1f6" media="(prefers-color-scheme: light)" />
+<title>Laundry — free machines right now</title>
+<style>
+  :root {
+    --bg: #eef1f6; --bg2: #e6eaf1;
+    --card: #ffffff; --card2: #f5f7fb;
+    --border: #e0e5ee;
+    --text: #10141b; --dim: #5a6472; --faint: #8b94a3;
+    --accent: #2c62f0;
+    --free: #0f9d58; --free-bg: rgba(15,157,88,.10);
+    --run: #b26a00; --run-bg: rgba(178,106,0,.10);
+    --done: #d12626; --done-bg: rgba(209,38,38,.09);
+    --off: #64748b; --off-bg: rgba(100,116,139,.10);
+    --shadow: 0 1px 2px rgba(16,20,27,.06), 0 6px 18px rgba(16,20,27,.05);
+    --radius: 16px;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #0b0e13; --bg2: #0e1219;
+      --card: #151a22; --card2: #1b212c;
+      --border: #232b38;
+      --text: #eef1f6; --dim: #9aa6b6; --faint: #66717f;
+      --accent: #5b8cff;
+      --free: #34d399; --free-bg: rgba(52,211,153,.13);
+      --run: #fbbf24; --run-bg: rgba(251,191,36,.13);
+      --done: #f87171; --done-bg: rgba(248,113,113,.13);
+      --off: #94a3b8; --off-bg: rgba(148,163,184,.12);
+      --shadow: 0 1px 2px rgba(0,0,0,.4), 0 8px 22px rgba(0,0,0,.3);
+    }
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    margin: 0; background: var(--bg); color: var(--text);
+    font: 16px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    background-image: radial-gradient(120% 60% at 50% -10%, var(--bg2), var(--bg));
+    background-attachment: fixed;
+    padding: max(14px, env(safe-area-inset-top)) 0 40px;
+  }
+  .wrap { max-width: 620px; margin: 0 auto; padding: 0 16px; }
+
+  header { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 6px 2px 4px; }
+  .brand { display: flex; align-items: center; gap: 10px; }
+  .brand .logo { font-size: 25px; line-height: 1; }
+  .brand h1 { margin: 0; font-size: 19px; font-weight: 750; letter-spacing: -.02em; }
+  .live { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--faint); font-weight: 600; }
+  .live .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--free); animation: pulse 2.4s infinite; }
+  @keyframes pulse { 0%{box-shadow:0 0 0 0 rgba(52,211,153,.5)} 70%{box-shadow:0 0 0 7px rgba(52,211,153,0)} 100%{box-shadow:0 0 0 0 rgba(52,211,153,0)} }
+
+  .summary { margin: 8px 2px 14px; color: var(--dim); font-size: 14px; }
+  .summary b { color: var(--text); font-weight: 700; }
+
+  .card {
+    position: relative; background: var(--card); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 15px 16px 14px; margin: 11px 0;
+    box-shadow: var(--shadow); overflow: hidden;
+    transition: border-color .18s ease, background .18s ease;
+  }
+  .card::before { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 4px; background: var(--sc, var(--off)); }
+  .card.s-FREE { --sc: var(--free); }
+  .card.s-RUNNING { --sc: var(--run); }
+  .card.s-DONE_UNCOLLECTED { --sc: var(--done); background: linear-gradient(0deg, var(--done-bg), transparent 55%), var(--card); }
+  .card.s-OFFLINE { --sc: var(--off); }
+  .card.focus { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent), var(--shadow); }
+
+  .top { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+  .label { font-size: 18px; font-weight: 750; letter-spacing: -.01em; }
+  .right { display: flex; align-items: center; gap: 10px; flex: none; }
+  .watt { font-size: 13px; font-weight: 700; color: var(--dim); font-variant-numeric: tabular-nums; }
+  .watt:empty { display: none; }
+  .pill { display: inline-flex; align-items: center; gap: 6px; font-size: 12.5px; font-weight: 700;
+          padding: 5px 10px 5px 8px; border-radius: 999px; white-space: nowrap;
+          color: var(--sc); background: var(--pc, var(--off-bg)); }
+  .s-FREE .pill { --pc: var(--free-bg); } .s-RUNNING .pill { --pc: var(--run-bg); }
+  .s-DONE_UNCOLLECTED .pill { --pc: var(--done-bg); } .s-OFFLINE .pill { --pc: var(--off-bg); }
+  .pill .d { width: 8px; height: 8px; border-radius: 50%; background: currentColor; }
+  .s-RUNNING .pill .d { animation: blink 1.3s infinite; }
+  @keyframes blink { 50% { opacity: .3; } }
+
+  .sub { color: var(--dim); font-size: 13.5px; margin: 9px 0 0; min-height: 18px; display: flex; align-items: center; gap: 7px; flex-wrap: wrap; }
+  .sub .clock { font-variant-numeric: tabular-nums; font-weight: 650; color: var(--text); }
+  .warn { color: var(--done); font-weight: 650; }
+
+  form { margin-top: 13px; display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  input {
+    grid-column: span 2; width: 100%; padding: 12px 14px; font-size: 16px; color: var(--text);
+    background: var(--card2); border: 1.5px solid var(--border); border-radius: 11px; outline: none;
+    transition: border-color .12s;
+  }
+  input:focus { border-color: var(--accent); }
+  input::placeholder { color: var(--faint); }
+  button {
+    grid-column: span 2; padding: 12px 16px; font-size: 15.5px; font-weight: 750; border: 0;
+    border-radius: 11px; cursor: pointer; color: #fff; background: var(--accent);
+    transition: transform .06s, opacity .12s; touch-action: manipulation;
+  }
+  button:active { transform: scale(.98); }
+  button:disabled { opacity: .55; }
+  button.done { background: var(--done); }
+  button.ghost { background: transparent; color: var(--sc); border: 1.5px solid var(--sc);
+                 border-color: color-mix(in srgb, var(--sc) 45%, transparent); }
+
+  .owned { margin-top: 13px; display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+  .who { display: flex; align-items: center; gap: 8px; font-size: 14px; color: var(--dim); min-width: 0; }
+  .who b { color: var(--text); font-weight: 700; }
+  .av { flex: none; width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center;
+        font-size: 13px; font-weight: 800; color: var(--sc); background: var(--pc, var(--off-bg)); }
+  .owned button { grid-column: auto; width: auto; }
+  .err { color: var(--done); font-size: 13px; margin-top: 7px; min-height: 16px; font-weight: 600; }
+  .err:empty { display: none; margin: 0; }
+
+  .banner { margin: 10px 2px 0; padding: 10px 14px; border-radius: 11px; font-size: 13px; font-weight: 600;
+            background: var(--off-bg); color: var(--off); display: none; }
+  .banner.show { display: block; }
+  footer { margin: 20px 4px 0; color: var(--faint); font-size: 12px; line-height: 1.6; text-align: center; }
+</style>
+
+<div class="wrap">
+  <header>
+    <div class="brand"><span class="logo">🧺</span><h1>Laundry room</h1></div>
+    <div class="live"><span class="dot"></span><span id="liveTxt">live</span></div>
+  </header>
+  <div class="summary" id="summary">Loading…</div>
+  <div id="banner" class="banner"></div>
+  <main id="app"></main>
+  <footer>
+    Honor system — tap “This is mine” when you load a machine and you'll get a text when it's done.
+  </footer>
+</div>
+
+<script>
+  const WORDS = { FREE:"Free", RUNNING:"In use", DONE_UNCOLLECTED:"Done — uncollected", OFFLINE:"Unknown" };
+  const app = document.getElementById("app");
+  const summaryEl = document.getElementById("summary");
+  const cards = new Map();            // id -> { el, r, claimed, done }
+  let didAutoFocus = false, fails = 0;
+
+  const pathMatch = location.pathname.match(/^\/m\/([^\/]+)/);
+  const focusId = pathMatch ? decodeURIComponent(pathMatch[1]) : null;
+
+  const esc = (s) => (s==null?"":String(s)).replace(/[&<>"']/g, c =>
+    ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[c]));
+  const fmtDur = (s) => {
+    if (s == null) return "";
+    s = Math.max(0, Math.floor(s));
+    if (s < 60) return s + "s";
+    const m = Math.floor(s/60), r = s%60;
+    if (m < 60) return r ? `${m}m ${r}s` : `${m}m`;
+    return `${Math.floor(m/60)}h ${m%60}m`;
+  };
+  const initials = (n) => (n||"?").trim().split(/\s+/).map(w=>w[0]).slice(0,2).join("").toUpperCase() || "?";
+
+  function subLine(m) {
+    if (m.state === "RUNNING")
+      return `<span>Running for</span><span class="clock">${fmtDur(m.running_for_s)}</span>`;
+    if (m.state === "DONE_UNCOLLECTED")
+      return `<span>Finished ${fmtDur(m.done_ago_s)} ago · frees in</span><span class="clock">${fmtDur(m.grace_left_s)}</span>`;
+    if (m.state === "OFFLINE")
+      return `<span class="warn">⚠ No signal from the plug — don't trust this tile</span>`;
+    return `<span>Ready to use</span>`;
+  }
+  const post = (url, body) =>
+    fetch(url, { method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify(body) });
+
+  function buildCard(m) {
+    const el = document.createElement("section");
+    el.className = "card s-" + m.state;
+    el.innerHTML = `
+      <div class="top">
+        <div class="label">${esc(m.label)}</div>
+        <div class="right"><span class="watt"></span>
+          <span class="pill"><span class="d"></span><span class="ptxt"></span></span></div>
+      </div>
+      <div class="sub"></div>
+      <div class="action"></div>`;
+    const rec = { el, claimed: null, done: null, r: {
+      watt: el.querySelector(".watt"), ptxt: el.querySelector(".ptxt"),
+      sub: el.querySelector(".sub"), action: el.querySelector(".action"),
+    }};
+    cards.set(m.id, rec);
+    return rec;
+  }
+
+  function renderClaim(rec, m) {
+    rec.r.action.innerHTML = `
+      <form>
+        <input data-k="name" placeholder="Your name" autocomplete="name" enterkeyhint="next" />
+        <input data-k="phone" placeholder="Mobile, e.g. +91 98765 43210" inputmode="tel" autocomplete="tel" enterkeyhint="done" />
+        <button type="submit">This is mine</button>
+      </form>
+      <div class="err"></div>`;
+    const form = rec.r.action.querySelector("form");
+    const err = rec.r.action.querySelector(".err");
+    form.onsubmit = async (e) => {
+      e.preventDefault();
+      const name = form.querySelector('[data-k="name"]').value.trim();
+      const phone = form.querySelector('[data-k="phone"]').value.trim();
+      err.textContent = "";
+      if (!name || !phone) { err.textContent = "Name and mobile both needed."; return; }
+      const btn = form.querySelector("button"); btn.disabled = true; btn.textContent = "Claiming…";
+      try {
+        const res = await post("/api/claim", { machine_id:m.id, name, phone });
+        if (res.status === 409) { err.textContent = "Someone just claimed this one."; btn.disabled=false; btn.textContent="This is mine"; }
+        else if (!res.ok) { err.textContent = "Couldn't claim — try again."; btn.disabled=false; btn.textContent="This is mine"; }
+      } catch { err.textContent = "Network hiccup — try again."; btn.disabled=false; btn.textContent="This is mine"; }
+      refresh();
+    };
+    if (m.id === focusId && !didAutoFocus) {
+      didAutoFocus = true;
+      rec.el.scrollIntoView({ behavior:"smooth", block:"center" });
+      setTimeout(() => form.querySelector('[data-k="name"]').focus(), 350);
+    }
+  }
+
+  function renderOwned(rec, m) {
+    const done = m.state === "DONE_UNCOLLECTED";
+    rec.r.action.innerHTML = `
+      <div class="owned">
+        <div class="who"><span class="av">${esc(initials(m.owner_name))}</span>
+          <span>Claimed by <b>${esc(m.owner_name)||"someone"}</b></span></div>
+        <button class="${done?"done":"ghost"}">Mark collected</button>
+      </div>`;
+    rec.r.action.querySelector("button").onclick = async (e) => {
+      const b = e.currentTarget; b.disabled = true; b.textContent = "…";
+      try { await post("/api/collect", { machine_id:m.id }); } finally { refresh(); }
+    };
+  }
+
+  function updateCard(rec, m) {
+    rec.el.className = "card s-" + m.state + (m.id === focusId ? " focus" : "");
+    rec.r.ptxt.textContent = WORDS[m.state] || m.state;
+    rec.r.watt.textContent = (m.state === "RUNNING" && m.last_reading != null) ? Math.round(m.last_reading) + " W" : "";
+    rec.r.sub.innerHTML = subLine(m);
+
+    const done = m.state === "DONE_UNCOLLECTED";
+    if (rec.claimed !== m.claimed) {
+      rec.claimed = m.claimed; rec.done = done;
+      m.claimed ? renderOwned(rec, m) : renderClaim(rec, m);   // rebuild only on claim-state change
+    } else if (m.claimed && rec.done !== done) {
+      rec.done = done; renderOwned(rec, m);                    // owned view: refresh button style on Done
+    }
+    // unclaimed + unchanged → leave the claim form untouched (typing & focus preserved)
+  }
+
+  function render(data) {
+    const list = data.machines;
+    summaryEl.innerHTML = `<b>${list.filter(m=>m.state==="FREE").length}</b> of <b>${list.length}</b> free right now`;
+    for (const m of list) {
+      let rec = cards.get(m.id);
+      if (!rec) { rec = buildCard(m); app.appendChild(rec.el); }
+      updateCard(rec, m);
+    }
+  }
+
+  async function refresh() {
+    try {
+      const r = await fetch("/api/machines", { cache:"no-store" });
+      if (!r.ok) throw 0;
+      render(await r.json());
+      fails = 0;
+      document.getElementById("banner").classList.remove("show");
+      document.getElementById("liveTxt").textContent = "live";
+    } catch {
+      if (++fails >= 2) {
+        const b = document.getElementById("banner");
+        b.textContent = "Can't reach the dashboard — retrying…"; b.classList.add("show");
+        document.getElementById("liveTxt").textContent = "reconnecting";
+      }
+    }
+  }
+
+  refresh();
+  setInterval(refresh, 2000);
+</script>

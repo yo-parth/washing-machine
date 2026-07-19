@@ -1,0 +1,7 @@
+# Server dependencies — what the Render web service installs.
+# NOTE: the poller (tapo) and QR tool (qrcode) are NOT here. The poller runs on
+# your LAN next to the plug, not on Render. For the local machine, use
+# requirements-local.txt instead.
+fastapi>=0.110
+uvicorn[standard]>=0.29
+requests>=2.31

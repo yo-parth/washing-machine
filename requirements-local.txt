@@ -1,0 +1,6 @@
+# Local machine dependencies: everything the server needs, plus the poller and
+# QR generator that run on your LAN. Use this for the laptop that talks to the
+# plug:   pip install -r requirements-local.txt
+-r requirements.txt
+tapo>=0.9          # reads the Tapo P110 (TPAP firmware); replaces python-kasa
+qrcode[pil]>=7.4   # make_qr.py sticker generator
