@@ -440,6 +440,18 @@ def collect(body: CollectBody):
     return {"ok": True}
 
 
+@app.get("/api/health")
+def health():
+    # No secrets — just whether things are wired up, for remote diagnosis.
+    return {
+        "ok": True,
+        "sms_configured": bool(TWILIO_SID and TWILIO_TOKEN and TWILIO_FROM),
+        "sim_enabled": SIM_ENABLED,
+        "default_country_code": DEFAULT_COUNTRY_CODE,
+        "version": "v2-phone-normalize+health",
+    }
+
+
 @app.get("/")
 def index():
     return FileResponse(INDEX_PATH)
