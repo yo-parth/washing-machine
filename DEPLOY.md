@@ -46,7 +46,7 @@ Open it — both machines should show, reading **Unknown** until the poller star
 ```bash
 # same DEVICE_KEY you set on Render:
 export DEVICE_KEY='the-long-secret-you-chose'
-export TAPO_USER='varmajai08@gmail.com'
+export TAPO_USER='you@example.com'            # your TP-Link / Tapo app login
 export TAPO_PASS='your-tapo-password'
 export TAPO_HOST=172.16.0.98
 export MACHINE_ID=wm-01
