@@ -143,9 +143,17 @@ def normalize_phone(raw, default_cc=DEFAULT_COUNTRY_CODE):
 #  bare E.164 numbers — no "whatsapp:" prefix.) Returns the HTTP status on a
 # send attempt (None if skipped or errored) so the path is verifiable.
 # --------------------------------------------------------------------------- #
+# Outcome of the most recent send_sms attempt, surfaced by /api/health for
+# remote diagnosis (no PII — only the last 4 digits of the recipient).
+LAST_SMS = {"status": "none", "http": None, "twilio_error": None, "to_tail": None, "ts": None}
+
+
 def send_sms(phone, name, label):
+    to = normalize_phone(phone)
+    LAST_SMS.update(to_tail=(to[-4:] if to else None), ts=time.time())
     if not (TWILIO_SID and TWILIO_TOKEN and TWILIO_FROM):
         log.warning("sms skipped: Twilio credentials not configured")
+        LAST_SMS.update(status="skipped_no_creds", http=None, twilio_error=None)
         return None
     try:
         body = (
@@ -154,22 +162,30 @@ def send_sms(phone, name, label):
         )
         resp = requests.post(
             f"https://api.twilio.com/2010-04-01/Accounts/{TWILIO_SID}/Messages.json",
-            data={"From": TWILIO_FROM, "To": normalize_phone(phone), "Body": body},
+            data={"From": TWILIO_FROM, "To": to, "Body": body},
             auth=(TWILIO_SID, TWILIO_TOKEN),
             timeout=10,
         )
         if resp.status_code >= 400:
+            code = None
+            try:
+                code = resp.json().get("code")
+            except Exception:  # noqa: BLE001
+                pass
             log.warning("sms failed: HTTP %s %s", resp.status_code, resp.text[:300])
+            LAST_SMS.update(status="http_error", http=resp.status_code, twilio_error=code)
         else:
             sid = ""
             try:
                 sid = resp.json().get("sid", "")
             except Exception:  # noqa: BLE001
                 pass
-            log.info("sms sent to %s (HTTP %s sid=%s)", phone, resp.status_code, sid)
+            log.info("sms sent (HTTP %s sid=%s)", resp.status_code, sid)
+            LAST_SMS.update(status="sent", http=resp.status_code, twilio_error=None)
         return resp.status_code
     except Exception as exc:  # noqa: BLE001 — fail soft, on purpose
         log.warning("sms error: %s", exc)
+        LAST_SMS.update(status="exception", http=None, twilio_error=str(exc)[:100])
         return None
 
 
@@ -446,9 +462,11 @@ def health():
     return {
         "ok": True,
         "sms_configured": bool(TWILIO_SID and TWILIO_TOKEN and TWILIO_FROM),
+        "twilio_from_tail": (TWILIO_FROM[-4:] if TWILIO_FROM else None),
         "sim_enabled": SIM_ENABLED,
         "default_country_code": DEFAULT_COUNTRY_CODE,
-        "version": "v2-phone-normalize+health",
+        "last_sms": LAST_SMS,
+        "version": "v3-sms-diag",
     }
 
 
