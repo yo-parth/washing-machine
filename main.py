@@ -14,6 +14,7 @@ The point stands: it's just a number.
 
 import logging
 import os
+import re
 import sqlite3
 import threading
 import time
@@ -38,6 +39,9 @@ DEVICE_KEY = os.environ.get("DEVICE_KEY", "change-me")
 # When the dashboard is public, the no-auth /api/sim endpoint is an abuse vector
 # (anyone could fake power readings). Disable it in prod with SIM_ENABLED=0.
 SIM_ENABLED = os.environ.get("SIM_ENABLED", "1").lower() not in ("0", "false", "no", "off")
+# Bare national numbers (e.g. "7507303008") make Twilio reject with error 21211.
+# Numbers without a country code get this one prepended. Default +91 (India).
+DEFAULT_COUNTRY_CODE = os.environ.get("DEFAULT_COUNTRY_CODE", "+91")
 
 TWILIO_SID = os.environ.get("TWILIO_SID")
 TWILIO_TOKEN = os.environ.get("TWILIO_TOKEN")
@@ -113,6 +117,24 @@ def record_event(machine_id, event, detail=None):
     )
 
 
+def normalize_phone(raw, default_cc=DEFAULT_COUNTRY_CODE):
+    """Best-effort E.164 so Twilio doesn't reject bare national numbers (21211).
+    '7507303008' -> '+917507303008', '07507…' -> '+917507…', '+91…' kept as-is.
+    Country code is configurable for non-India deployments."""
+    s = re.sub(r"[^\d+]", "", raw or "")
+    if not s:
+        return ""
+    if s.startswith("+"):
+        return s
+    if s.startswith("00"):
+        return "+" + s[2:]
+    digits = s.lstrip("0")
+    cc = default_cc.lstrip("+")
+    if digits.startswith(cc) and len(digits) > 10:
+        return "+" + digits           # already carries the country code, just add +
+    return default_cc + digits        # bare national number
+
+
 # --------------------------------------------------------------------------- #
 # SMS — fires exactly once on the transition into DONE_UNCOLLECTED.
 # Must fail soft: no creds, Twilio down, or a bad number → log and carry on.
@@ -132,7 +154,7 @@ def send_sms(phone, name, label):
         )
         resp = requests.post(
             f"https://api.twilio.com/2010-04-01/Accounts/{TWILIO_SID}/Messages.json",
-            data={"From": TWILIO_FROM, "To": phone, "Body": body},
+            data={"From": TWILIO_FROM, "To": normalize_phone(phone), "Body": body},
             auth=(TWILIO_SID, TWILIO_TOKEN),
             timeout=10,
         )
@@ -385,7 +407,7 @@ def claim(body: ClaimBody):
             raise HTTPException(status_code=409, detail="already claimed")
         conn.execute(
             "UPDATE machines SET owner_name=?, owner_phone=?, notified=0 WHERE id=?",
-            (body.name.strip(), body.phone.strip(), body.machine_id),
+            (body.name.strip(), normalize_phone(body.phone), body.machine_id),
         )
         record_event(body.machine_id, "claim", body.name.strip())
         conn.commit()
